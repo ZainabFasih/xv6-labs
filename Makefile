@@ -205,7 +205,7 @@ UPROGS=\
 	$U/_dorphan\
 	$U/_sync\
 	$U/_sixfive\
-
+	$U/_memdump\
 
 
 ifeq ($(LAB),syscall)

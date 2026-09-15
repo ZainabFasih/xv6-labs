@@ -60,6 +60,69 @@ main(int argc, char *argv[])
 void
 memdump(char *fmt, char *data, int len)
 {
-  // Your code here.  `data` holds `len` valid bytes.
+  int off = 0;
 
+  for (int fi = 0; fmt[fi]; fi++) {
+    char f = fmt[fi];
+    int remaining = len - off;
+
+    if (f == 'i') {
+      if (remaining < 4) {
+        printf("memdump: not enough data for 'i'\n");
+        return;
+      }
+      int val;
+      memmove(&val, data + off, 4);
+      printf("%d\n", val);
+      off += 4;
+
+    } else if (f == 'p') {
+      if (remaining < 8) {
+        printf("memdump: not enough data for 'p'\n");
+        return;
+      }
+      uint64 val;
+      memmove(&val, data + off, 8);
+      printf("%lx\n", val);
+      off += 8;
+
+    } else if (f == 'h') {
+      if (remaining < 2) {
+        printf("memdump: not enough data for 'h'\n");
+        return;
+      }
+      short val;
+      memmove(&val, data + off, 2);
+      printf("%d\n", val);
+      off += 2;
+
+    } else if (f == 'c') {
+      if (remaining < 1) {
+        printf("memdump: not enough data for 'c'\n");
+        return;
+      }
+      char val = data[off];
+      printf("%c\n", val);
+      off += 1;
+
+    } else if (f == 's') {
+      if (remaining < 8) {
+        printf("memdump: not enough data for 's'\n");
+        return;
+      }
+      char *ptr;
+      memmove(&ptr, data + off, 8);
+      printf("%s\n", ptr);
+      off += 8;
+
+    } else if (f == 'S') {
+      int seg_len = 0;
+      while (off + seg_len < len && data[off + seg_len] != 0) {
+        seg_len++;
+      }
+      write(1, data + off, seg_len);
+      write(1, "\n", 1);
+      off = len;
+    }
+  }
 }
