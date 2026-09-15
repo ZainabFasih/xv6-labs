@@ -3,7 +3,7 @@
 #include "kernel/types.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
-
+#include "kernel/fs.h"
 // Parsed command representation
 #define EXEC  1
 #define REDIR 2
@@ -12,7 +12,60 @@
 #define BACK  5
 
 #define MAXARGS 10
+#define MAXHIST 20
+char history[MAXHIST][100];
+int histcount = 0;
 
+void
+addhistory(char *cmd)
+{
+  strcpy(history[histcount % MAXHIST], cmd);
+  histcount++;
+}
+void
+complete(char *buf)
+{
+  char *tab = strchr(buf, '\t');
+  if (tab == 0)
+    return;
+
+  char *start = tab;
+  while (start > buf && *(start - 1) != ' ' && *(start - 1) != '\n')
+    start--;
+
+  int prefixlen = tab - start;
+  char prefix[64];
+  memmove(prefix, start, prefixlen);
+  prefix[prefixlen] = 0;
+
+  int fd = open(".", 0);
+  if (fd < 0) { *tab = ' '; return; }
+
+  struct dirent de;
+  char match[DIRSIZ + 1];
+  int found = 0;
+  while (read(fd, &de, sizeof(de)) == sizeof(de)) {
+    if (de.inum == 0) continue;
+    int i, match_ok = 1;
+    for (i = 0; i < prefixlen; i++) {
+      if (de.name[i] != prefix[i]) { match_ok = 0; break; }
+    }
+    if (match_ok) {
+      memmove(match, de.name, DIRSIZ);
+      match[DIRSIZ] = 0;
+      found = 1;
+      break;
+    }
+  }
+  close(fd);
+
+  if (!found) { *tab = ' '; return; }
+
+  char rest[512];
+  strcpy(rest, tab + 1);
+  strcpy(start, match);
+  strcpy(start + strlen(match), rest);
+}
 struct cmd {
   int type;
 };
@@ -124,8 +177,7 @@ runcmd(struct cmd *cmd)
 
   case BACK:
     bcmd = (struct backcmd *)cmd;
-    if (fork1() == 0)
-      runcmd(bcmd->cmd);
+    runcmd(bcmd->cmd);
     break;
   }
   exit(0);
@@ -137,6 +189,7 @@ getcmd(char *buf, int nbuf)
   write(2, "$ ", 2);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
+  complete(buf);
   if (buf[0] == 0) // EOF
     return -1;
   return 0;
@@ -163,15 +216,33 @@ main(void)
       cmd++;
     if (*cmd == '\n') // is a blank command
       continue;
+    addhistory(buf);
     if (cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' ') {
       // Chdir must be called by the parent, not the child.
       cmd[strlen(cmd) - 1] = 0; // chop \n
       if (chdir(cmd + 3) < 0)
         fprintf(2, "cannot cd %s\n", cmd + 3);
+    } else if (cmd[0] == 'w' && cmd[1] == 'a' && cmd[2] == 'i' && cmd[3] == 't' &&
+               (cmd[4] == '\n' || cmd[4] == ' ' || cmd[4] == 0)) {
+      while (wait(0) >= 0)
+        ;    
+    } else if (cmd[0] == 'h' && cmd[1] == 'i' && cmd[2] == 's' && cmd[3] == 't' &&
+               (cmd[4] == '\n' || cmd[4] == ' ' || cmd[4] == 0)) {
+      int start = histcount > MAXHIST ? histcount - MAXHIST : 0;
+      for (int i = start; i < histcount; i++)
+        printf("%d %s", i + 1, history[i % MAXHIST]);
     } else {
+      int isbg = 0;
+      char *p = cmd + strlen(cmd) - 1;
+      while (p > cmd && (*p == '\n' || *p == ' ' || *p == '\t'))
+        p--;
+      if (*p == '&')
+        isbg = 1;
+
       if (fork1() == 0)
         runcmd(parsecmd(cmd));
-      wait(0);
+      if (!isbg)
+        wait(0);
     }
   }
   exit(0);
