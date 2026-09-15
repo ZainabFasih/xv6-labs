@@ -206,7 +206,7 @@ UPROGS=\
 	$U/_sync\
 	$U/_sixfive\
 	$U/_memdump\
-
+	$U/_find\
 
 ifeq ($(LAB),syscall)
 UPROGS += \
