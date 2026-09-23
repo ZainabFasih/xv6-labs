@@ -124,6 +124,8 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->sandbox_mask = 0;
+  p->sandbox_path[0] = '\0';
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0) {
@@ -167,6 +169,8 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+  p->sandbox_mask = 0;
+  p->sandbox_path[0] = '\0';
   p->state = UNUSED;
 }
 
@@ -274,6 +278,8 @@ kfork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->sandbox_mask = p->sandbox_mask;
+  safestrcpy(np->sandbox_path, p->sandbox_path, sizeof(p->sandbox_path));
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -319,7 +325,7 @@ reparent(struct proc *p)
   }
 }
 
-// Exit the current process.  Does not return.
+// Exit the current process. Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
 void
@@ -420,7 +426,7 @@ kwait(uint64 addr)
 
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
-// Scheduler never returns.  It loops, doing:
+// Scheduler never returns. It loops, doing:
 //  - choose a process to run.
 //  - swtch to start running that process.
 //  - eventually that process transfers control
@@ -445,7 +451,7 @@ scheduler(void)
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
+        // Switch to chosen process. It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
@@ -469,7 +475,7 @@ scheduler(void)
   }
 }
 
-// Switch to scheduler.  Must hold only p->lock
+// Switch to scheduler. Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
 // kernel thread, not this CPU. It should
@@ -556,7 +562,7 @@ sleep_prepare(void *chan)
   release(&p->lock);
 }
 
-// Put the thread to sleep.  Assumes sleep_prepare() was called before.
+// Put the thread to sleep. Assumes sleep_prepare() was called before.
 // If the channel registered by sleep_prepare() has been woken up in
 // the meantime, do not go to sleep, and instead return immediately.
 void
@@ -668,7 +674,7 @@ either_copyin(void *dst, int user_src, uint64 src, uint64 len)
   }
 }
 
-// Print a process listing to console.  For debugging.
+// Print a process listing to console. For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.
 void
@@ -676,12 +682,12 @@ procdump(void)
 {
   static char *states[] = {
     // clang-format off
-    [UNUSED]    = "unused",
-    [USED]      = "used",
-    [SLEEPING]  = "sleep ",
-    [RUNNABLE]  = "runble",
-    [RUNNING]   = "run   ",
-    [ZOMBIE]    = "zombie"
+    [UNUSED]   = "unused",
+    [USED]     = "used",
+    [SLEEPING] = "sleep ",
+    [RUNNABLE] = "runble",
+    [RUNNING]  = "run   ",
+    [ZOMBIE]   = "zombie"
     // clang-format on
   };
   struct proc *p;

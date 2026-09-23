@@ -110,3 +110,25 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_interpose(void)
+{
+  int mask;
+  char path[MAXPATH];
+  struct proc *p = myproc();
+
+  argint(0, &mask);
+
+  // Record the allowed path only when the process is not yet sandboxed,
+  // so a confined process cannot escape or widen its whitelist by changing
+  // the path. Restrictions can only be tightened, never lifted.
+  if (p->sandbox_mask == 0) {
+    if (argstr(1, path, MAXPATH) < 0)
+      return -1;
+    safestrcpy(p->sandbox_path, path, sizeof(p->sandbox_path));
+  }
+
+  p->sandbox_mask |= mask;
+  return 0;
+}

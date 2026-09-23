@@ -1,0 +1,19 @@
+1. Which function called syscall?
+usertrap
+
+2. What is the value of p->trapframe->a7 and what does that value represent?
+0x7 (decimal 7). It represents SYS_exec (the system call number for exec).
+
+3. What was the previous mode that the CPU was in?
+User mode (U-mode). In $sstatus (0x200000022), the SPP bit (bit 8) is 0.
+
+4. Assembly instruction the kernel panics at and corresponding register for num:
+Instruction: lw a3, 0(zero)
+Register for num: a3
+
+5. Why does the kernel crash?
+Address 0 is unmapped in the kernel address space. The scause value 0xd (decimal 13) indicates a Load Page Fault caused by dereferencing address 0.
+
+6. Name and PID of running process during panic:
+Name: initcode
+PID: 1
