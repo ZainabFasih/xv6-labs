@@ -210,6 +210,7 @@ UPROGS=\
 ifeq ($(LAB),syscall)
 UPROGS += \
 	$U/_attack\
+$U/_freemem\
 	$U/_secret
 endif
 

@@ -9,6 +9,7 @@
 
 // Fetch the uint64 at addr from the current process.
 extern uint64 sys_interpose(void);
+extern uint64 sys_freemem(void);
 
 int
 fetchaddr(uint64 addr, uint64 *ip)
@@ -134,6 +135,7 @@ static uint64 (*syscalls[])(void) = {
   [SYS_close]     = sys_close,
   [SYS_sync]      = sys_sync,
   [SYS_interpose] = sys_interpose,
+[SYS_freemem] = sys_freemem,
   // clang-format on
 };
 

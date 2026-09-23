@@ -42,5 +42,6 @@ entry("getpid");
 entry("sbrk");
 entry("pause");
 entry("uptime");
+entry("freemem");
 entry("sync");
 entry("interpose");

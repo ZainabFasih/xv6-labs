@@ -22,3 +22,4 @@
 #define SYS_close  21
 #define SYS_sync   22
 #define SYS_interpose 22
+#define SYS_freemem 23
