@@ -1,0 +1,24 @@
+Q: For every PTE in the print_pgtbl output, explain what it logically
+contains and what its permission bits are.
+
+Each line shows: va (virtual address), pte (raw entry), pa (physical
+address from the PTE's PPN), and perm (the low flag bits).
+
+PTE flags (riscv.h): PTE_V=0x01 valid, PTE_R=0x02 read, PTE_W=0x04 write,
+PTE_X=0x08 execute, PTE_U=0x10 user, PTE_A=0x40 accessed, PTE_D=0x80 dirty.
+
+- Low virtual addresses (va 0, 0x1000, ...) are the user program's text,
+  data and stack. perm 0x1B = V|R|W|U; perm 0x5B = that plus the ACCESSED
+  bit. Text is read+execute+user; data/stack is read+write+user.
+
+- Lines with pte 0x0 / pa 0x0 / perm 0x0 are UNMAPPED pages (no valid PTE),
+  i.e. gaps in the address space such as guard-page regions.
+
+- High virtual addresses are the special top-of-space pages:
+    * perm 0xC7 = V|R|W|A|D, PTE_U NOT set  -> TRAPFRAME: kernel-only R/W.
+    * perm 0x4B = V|R|X|A,  PTE_U NOT set  -> TRAMPOLINE: kernel-only R/X;
+      the same physical page is mapped into every process at the top.
+
+Each PTE maps one 4096-byte virtual page to one physical page and records
+what the page may be used for. xv6 does not place virtual pages
+consecutively in physical memory, so consecutive va map to scattered pa.

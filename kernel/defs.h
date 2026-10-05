@@ -169,6 +169,8 @@ void            uartwrite(char [], int);
 void            uartputc_sync(int);
 
 // vm.c
+pte_t *         walk(pagetable_t, uint64, int);
+void            vmprint(pagetable_t);
 void            kvminit(void);
 void            kvminithart(void);
 void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
@@ -188,7 +190,6 @@ int             copyinstr(pagetable_t, uint64, char *, uint64, uint64);
 int             ismapped(pagetable_t, uint64);
 uint64          vmfault(pagetable_t, uint64, uint64, int);
 #if defined(LAB_PGTBL) || defined(SOL_MMAP)
-void            vmprint(pagetable_t);
 #endif
 #ifdef LAB_PGTBL
 uint64          sys_ksupernpte(void);

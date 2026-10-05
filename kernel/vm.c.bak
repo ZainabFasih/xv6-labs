@@ -148,38 +148,10 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
 
 #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
-static void vmprint_walk(pagetable_t, int, uint64);
-
-static void
-vmprint_walk(pagetable_t pagetable, int level, uint64 va)
-{
-  for(int i = 0; i < 512; i++){
-    pte_t pte = pagetable[i];
-    if((pte & PTE_V) == 0)
-      continue;
-    uint64 entry_va = va + ((uint64)i << PXSHIFT(level));
-    uint64 pa = PTE2PA(pte);
-    for(int d = 2; d >= level; d--)
-      printk(" ..");
-    printk("%p: pte %p pa %p", (void*)entry_va, (void*)pte, (void*)pa);
-    if(pte & (PTE_R | PTE_W | PTE_X)){
-      printk(" ");
-      if(pte & PTE_R) printk("R");
-      if(pte & PTE_W) printk("W");
-      if(pte & PTE_X) printk("X");
-      if(pte & PTE_U) printk("U");
-    }
-    printk("\n");
-    if((pte & (PTE_R | PTE_W | PTE_X)) == 0 && level > 0)
-      vmprint_walk((pagetable_t)pa, level - 1, entry_va);
-  }
-}
-
 void
 vmprint(pagetable_t pagetable)
 {
-  printk("page table %p\n", (void*)pagetable);
-  vmprint_walk(pagetable, 2, 0);
+  // your code here
 }
 #endif
 
@@ -187,60 +159,10 @@ vmprint(pagetable_t pagetable)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
-static pte_t *
-superwalk(pagetable_t pagetable, uint64 va, int alloc)
-{
-  if (va >= MAXVA)
-    panic("superwalk");
-  pte_t *pte = &pagetable[PX(2, va)];
-  if (*pte & PTE_V) {
-    pagetable = (pagetable_t)PTE2PA(*pte);
-  } else {
-    if (!alloc || (pagetable = (pde_t *)kalloc()) == 0)
-      return 0;
-    memset(pagetable, 0, PGSIZE);
-    *pte = PA2PTE(pagetable) | PTE_V;
-  }
-  return &pagetable[PX(1, va)];
-}
-
-static int
-mappages_super(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
-{
-  uint64 a = va;
-  uint64 last = va + size - PGSIZE;
-  pte_t *pte;
-  for (;;) {
-    if ((a % SUPERPGSIZE) == 0 && (pa % SUPERPGSIZE) == 0 &&
-        (last - a + PGSIZE) >= SUPERPGSIZE) {
-      if ((pte = superwalk(pagetable, a, 1)) == 0)
-        return -1;
-      if (*pte & PTE_V)
-        panic("mappages_super: remap");
-      *pte = PA2PTE(pa) | perm | PTE_V;
-      if (a + SUPERPGSIZE - PGSIZE == last)
-        break;
-      a += SUPERPGSIZE;
-      pa += SUPERPGSIZE;
-    } else {
-      if ((pte = walk(pagetable, a, 1)) == 0)
-        return -1;
-      if (*pte & PTE_V)
-        panic("mappages_super: remap");
-      *pte = PA2PTE(pa) | perm | PTE_V;
-      if (a == last)
-        break;
-      a += PGSIZE;
-      pa += PGSIZE;
-    }
-  }
-  return 0;
-}
-
 void
 kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 {
-  if (mappages_super(kpgtbl, va, sz, pa, perm) != 0)
+  if (mappages(kpgtbl, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 
@@ -616,3 +538,44 @@ ismapped(pagetable_t pagetable, uint64 va)
 }
 
 
+
+#ifdef LAB_PGTBL
+// Recursively print a page table (helper).
+static void
+vmprint_walk(pagetable_t pagetable, int level)
+{
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      // print the indentation dots for this depth
+      for(int d = 0; d <= level; d++)
+        printk(" ..");
+      // virtual address covered by this index at this level
+      uint64 va = (uint64)i << PXSHIFT(2 - level);
+      uint64 pa = PTE2PA(pte);
+      printk("0x%016p: pte 0x%016p pa 0x%016p", va, pte, pa);
+      // if it's a leaf (R/W/X set), print its permission letters
+      if(pte & (PTE_R | PTE_W | PTE_X)){
+        printk(" ");
+        if(pte & PTE_R) printk("R"); 
+        if(pte & PTE_W) printk("W");
+        if(pte & PTE_X) printk("X");
+        if(pte & PTE_U) printk("U");
+      }
+      printk("\n");
+      // if not a leaf, recurse into the next level down
+      if((pte & (PTE_R | PTE_W | PTE_X)) == 0 && level < 2){
+        uint64 child = PTE2PA(pte);
+        vmprint_walk((pagetable_t)child, level + 1);
+      }
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+  printk("page table 0x%016p\n", (uint64)pagetable);
+  vmprint_walk(pagetable, 0);
+}
+#endif

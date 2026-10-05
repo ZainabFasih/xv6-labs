@@ -110,7 +110,42 @@ sys_vmprint(void)
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  uint64 va;        // starting virtual address
+  int npages;       // number of pages to check
+  uint64 uaddr;     // user address of the result bitmask
+
+  argaddr(0, &va);
+  argint(1, &npages);
+  argaddr(2, &uaddr);
+
+  // reasonable upper bound (test requires a huge count to fail)
+  if(npages < 0 || npages > 4096)
+    return -1;
+
+  struct proc *p = myproc();
+
+  // build the bitmask in a kernel buffer (1 bit per page)
+  char buf[512];                 // 512 bytes = up to 4096 pages
+  int nbytes = (npages + 7) / 8;
+  for(int k = 0; k < nbytes; k++)
+    buf[k] = 0;
+
+  for(int i = 0; i < npages; i++){
+    uint64 a = va + (uint64)i * PGSIZE;
+    if(a >= p->sz)               // address outside the process's memory
+      return -1;
+    pte_t *pte = walk(p->pagetable, a, 0);
+    if(pte == 0 || (*pte & PTE_V) == 0)
+      continue;                  // not mapped: just leave its bit 0
+    if(*pte & PTE_A){
+      buf[i/8] |= (1 << (i%8));  // set this page's bit
+      *pte &= ~PTE_A;            // clear so next call starts fresh
+    }
+  }
+
+  if(copyout(p->pagetable, p->sz, uaddr, buf, nbytes) < 0)
+    return -1;
+
   return 0;
 }
 #endif
