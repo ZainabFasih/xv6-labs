@@ -1,17 +1,17 @@
-1. Arguments go in registers a0–a7. In main's call to printf, 13 is in a2.
+1. Arguments go in registers a0-a7. In main's call to printf, 13 is in a2.
 
 2. The compiler INLINES f and g into main, so there is no call instruction to f or
-   g in main's assembly — main computes the result directly (e.g. "li a1, 12").
+   g in main's assembly - main computes the result directly (e.g. "li a1, 12").
 
-3. printf is located at address 0x_____  (the number before <printf>: in call.asm)
+3. printf is located at address 0x00000000000006f2.
 
-4. After the jalr to printf in main, ra holds the address of the next instruction
-   in main (read it from call.asm — the instruction right after the jalr).
+4. Just after the call "jal ra,6f2 <printf>" (at 0x30), ra holds 0x0000000000000034
+   (the address of the next instruction, "li a0,0" for exit(0)).
 
 5. printf("H%x Wo%s", 57616, (char *)&i) with i=0x00646c72 prints:  He110 World
-   (57616 = 0xe110; i's bytes little-endian are 72 6c 64 00 = 'r''l''d''\0' = "rld")
+   (57616 = 0xe110; i's bytes little-endian are 72 6c 64 00 = 'r' 'l' 'd' '\0' = "rld")
 
 6. On big-endian, set i = 0x726c6400 to get the same output. 57616 does NOT change.
 
 7. printf("x=%d y=%d", 3) prints an undefined/garbage value after "y=", because no
-   second argument was passed and printf reads whatever is left in register a2.
+   second integer argument was passed and printf reads whatever is left in register a2.
