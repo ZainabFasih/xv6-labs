@@ -161,7 +161,7 @@ backtrace(void)
   printk("backtrace:\n");
   while (fp >= bottom && fp < top) {
     uint64 ra = *(uint64 *)(fp - 8);
-    printk("%p\n", (void*)ra);
+    printk("%p\n", (void *)ra);
     fp = *(uint64 *)(fp - 16);
   }
 }
