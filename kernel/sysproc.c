@@ -136,3 +136,16 @@ sys_sigreturn(void)
   p->alarm_on = 0;
   return p->trapframe->a0;
 }
+
+uint64
+sys_pgpte(void)
+{
+  uint64 va;
+  argaddr(0, &va);
+
+  struct proc *p = myproc();
+  pte_t *pte = walk(p->pagetable, va, 0);
+  if(pte == 0)
+    return 0;
+  return (uint64) *pte;
+}

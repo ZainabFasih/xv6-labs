@@ -45,3 +45,4 @@ entry("uptime");
 entry("sync");
 entry("sigalarm");
 entry("sigreturn");
+entry("pgpte");

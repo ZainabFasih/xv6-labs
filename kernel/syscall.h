@@ -23,3 +23,4 @@
 #define SYS_sync      22
 #define SYS_sigalarm  23
 #define SYS_sigreturn 24
+#define SYS_pgpte  25
