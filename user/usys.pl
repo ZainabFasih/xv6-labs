@@ -46,3 +46,5 @@ entry("sync");
 entry("sigalarm");
 entry("sigreturn");
 entry("pgpte");
+entry("mmap");
+entry("munmap");

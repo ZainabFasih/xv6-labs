@@ -39,6 +39,8 @@ int atoi(const char *);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 char *sbrk(int);
+void *mmap(void *addr, int length, int prot, int flags, int fd, int offset);
+int munmap(void *addr, int length);
 char *sbrklazy(int);
 uint64 pgpte(void *va);
 

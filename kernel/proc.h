@@ -79,6 +79,16 @@ struct trapframe {
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
+struct vma {
+  int used;             // is this slot in use?
+  uint64 addr;          // start virtual address
+  uint64 length;        // length in bytes (as requested)
+  int prot;             // PROT_READ / PROT_WRITE / ...
+  int flags;            // MAP_SHARED / MAP_PRIVATE
+  int offset;           // file offset
+  struct file *file;    // the mapped file
+};
+
 struct proc {
   struct spinlock lock;
 
@@ -107,4 +117,5 @@ struct proc {
   int alarm_ticks;           // ticks since last alarm
   int alarm_on;              // 1 while handler running
   struct trapframe alarm_tf; // saved regs for sigreturn
+  struct vma vmas[NVMA];       // mmap regions
 };

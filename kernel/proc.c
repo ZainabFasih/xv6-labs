@@ -151,6 +151,9 @@ found:
   p->alarm_ticks = 0;
   p->alarm_on = 0;
 
+  for (int vi = 0; vi < NVMA; vi++)
+    p->vmas[vi].used = 0;
+
   return p;
 }
 
@@ -290,6 +293,14 @@ kfork(void)
   for (i = 0; i < NOFILE; i++)
     if (p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
+
+  for (i = 0; i < NVMA; i++) {
+    if (p->vmas[i].used) {
+      np->vmas[i] = p->vmas[i];
+      filedup(p->vmas[i].file);
+    }
+  }
+
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
@@ -334,6 +345,16 @@ kexit(int status)
 
   if (p == initproc)
     panic("init exiting");
+
+  // Unmap and write back any mmap regions.
+  for (int vi = 0; vi < NVMA; vi++) {
+    struct vma *v = &p->vmas[vi];
+    if (v->used) {
+      vmaunmap(p->pagetable, v, v->addr, v->length);
+      fileclose(v->file);
+      v->used = 0;
+    }
+  }
 
   // Close all open files.
   for (int fd = 0; fd < NOFILE; fd++) {
